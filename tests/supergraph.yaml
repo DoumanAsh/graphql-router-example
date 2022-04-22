@@ -1,0 +1,13 @@
+subgraphs:
+  user:
+    routing_url: http://127.0.0.1:9000/user
+    schema:
+      file: ./user.graphql
+  product:
+    routing_url: http://127.0.0.1:9000/product
+    schema:
+      file: ./product.graphql
+  review:
+    routing_url: http://127.0.0.1:9000/review
+    schema:
+      file: ./review.graphql

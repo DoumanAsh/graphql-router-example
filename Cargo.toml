@@ -1,0 +1,60 @@
+[package]
+name = "graphql-router"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies.tracing]
+version = "0.1"
+default-features = false
+features = ["attributes"]
+
+[dependencies.http]
+version = "0.2"
+default-features = false
+
+[dependencies.serde_json]
+version = "1"
+default-features = false
+
+[dependencies.serde_json_bytes]
+version = "0.2"
+default-features = false
+
+[dependencies.tower]
+version = "0.4.12"
+default-features = false
+features = ["util"]
+
+[dependencies.tower-service]
+version = "0.3.1"
+default-features = false
+
+[dependencies.async-graphql]
+version = "3.0.38"
+default-features = false
+
+[dependencies.hyper]
+version = "0.14"
+default-features = false
+features = ["client"]
+
+[dependencies.hyper-rustls]
+version = "0.23"
+default-features = false
+
+[dependencies.apollo-router-core]
+git = "https://github.com/apollographql/router"
+rev = "a4b78d3774926a28c02ca4c0ba66780de13c9ca5"
+default-features = false
+
+[dev-dependencies.async-graphql-axum]
+version = "3.0.38"
+default-features = false
+
+[dev-dependencies.axum]
+version = "0.5.3"
+
+[dev-dependencies.tokio]
+version = "1"
+features = ["macros", "sync"]
