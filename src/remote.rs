@@ -23,13 +23,13 @@ struct Config {
 ///Remote subgraph builder
 pub struct RemoteGraphBuilder {
     url: hyper::Uri,
-    name: String,
+    name: &'static str,
     config: Config,
 }
 
 impl RemoteGraphBuilder {
     #[inline(always)]
-    pub fn new(name: String, url: hyper::Uri) -> Self {
+    pub fn new(name: &'static str, url: hyper::Uri) -> Self {
         Self {
             name,
             url,
@@ -72,7 +72,7 @@ impl BuildGraph for RemoteGraphBuilder {
 
     #[inline(always)]
     fn name(&self) -> &str {
-        self.name.as_str()
+        self.name
     }
 
     #[inline(always)]
@@ -84,7 +84,7 @@ impl BuildGraph for RemoteGraphBuilder {
 ///Remote subgraph service
 pub struct RemoteGraphService {
     url: hyper::Uri,
-    name: String,
+    name: &'static str,
     http: hyper::Client<HttpsConnector<HttpConnector>>,
     config: Config,
 }
@@ -107,7 +107,7 @@ impl Service<SubgraphRequest> for RemoteGraphService {
             self.http.clone(),
             request,
             self.config,
-            self.name.clone(),
+            self.name,
             self.url.clone(),
         ))
     }
@@ -158,10 +158,10 @@ async fn remote_subgraph(
     mut http: hyper::Client<HttpsConnector<HttpConnector>>,
     req: SubgraphRequest,
     config: Config,
-    service_name: String,
+    service_name: &'static str,
     mut url: hyper::Uri,
 ) -> Result<SubgraphResponse, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    tracing::debug!("{}: Remote subgraph request towards {}", service_name, url);
+    tracing::info!("{}: Remote subgraph request towards {}", service_name, url);
 
     let mut http_request = req.subgraph_request;
     let context = req.context;
@@ -233,12 +233,12 @@ async fn remote_subgraph(
                             }
                         };
 
-                        let response = match apollo_router_core::Response::from_bytes(&service_name, body) {
+                        let response = match apollo_router_core::Response::from_bytes(service_name, body) {
                             Ok(response) => response,
                             //This should not happen
                             Err(error) => {
                                 return Err(apollo_router_core::FetchError::SubrequestMalformedResponse {
-                                    service: service_name,
+                                    service: service_name.to_owned(),
                                     reason: error.to_string(),
                                 }
                                 .into());
@@ -263,7 +263,7 @@ async fn remote_subgraph(
     }
 
     let fetch_error = apollo_router_core::FetchError::SubrequestHttpError {
-        service: service_name,
+        service: service_name.to_owned(),
         reason: fetch_error_reason,
     };
     Err(fetch_error.into())

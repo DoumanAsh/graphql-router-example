@@ -16,7 +16,8 @@ use core::pin::Pin;
 use core::task;
 
 mod parser;
-pub use parser::{parse_http_request, ParseHttpError};
+mod plugins;
+pub use parser::{from_request_parts, parse_http_request, ParseHttpError};
 pub mod local;
 pub use local::LocalGraphBuilder;
 pub mod remote;
@@ -61,9 +62,7 @@ impl Future for GraphqlRouterHandler {
                 GraphqlRouterHandlerState::Ongoing(ongoing) => return Future::poll(Pin::new(ongoing), ctx),
                 GraphqlRouterHandlerState::Pending(req) => match this.service.poll_ready(ctx) {
                     task::Poll::Ready(Ok(())) => {
-                        let mut future_req = RouterRequest::fake_builder()
-                            .build()
-                            .into();
+                        let mut future_req = RouterRequest::fake_builder().build().unwrap();
                         core::mem::swap(&mut future_req, req);
                         //intentionally falling through to poll future
                         GraphqlRouterHandlerState::Ongoing(this.service.call(future_req))
@@ -138,6 +137,17 @@ impl GraphqlRouterBuilder {
         }
     }
 
+    #[inline]
+    ///Enables header propagation.
+    pub fn propagate_headers(self) -> Self {
+        Self {
+            schema: self.schema,
+            builder: self
+                .builder
+                .with_plugin("propagate_headers".to_owned(), plugins::PropagateHeaders),
+        }
+    }
+
     #[inline(always)]
     ///Finalizes builder
     ///
@@ -147,7 +157,7 @@ impl GraphqlRouterBuilder {
     pub async fn finish(self) -> Result<GraphqlRouter, apollo_router_core::ServiceBuildError> {
         Ok(GraphqlRouter {
             schema: self.schema,
-            service: self.builder.build().await?.0,
+            service: self.builder.with_naive_introspection().build().await?.0,
         })
     }
 }

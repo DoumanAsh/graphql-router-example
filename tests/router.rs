@@ -213,14 +213,14 @@ async fn super_handler(
 ) -> axum::Json<GraphqlResponse> {
     let req = req.0;
 
-    let user_subgraph = LocalGraphBuilder::new("user".to_owned(), user::schema);
-    let product_subgraph =
-        RemoteGraphBuilder::new("product".to_owned(), "http://127.0.0.1:9000/product".parse().unwrap());
-    let review_subgraph = RemoteGraphBuilder::new("review".to_owned(), "http://127.0.0.1:9000/review".parse().unwrap());
+    let user_subgraph = LocalGraphBuilder::new("user", user::schema());
+    let product_subgraph = RemoteGraphBuilder::new("product", "http://127.0.0.1:9000/product".parse().unwrap());
+    let review_subgraph = RemoteGraphBuilder::new("review", "http://127.0.0.1:9000/review".parse().unwrap());
     let mut router = GraphqlRouter::build(supergraph.0)
         .add_subgraph(user_subgraph)
         .add_subgraph(review_subgraph)
         .add_subgraph(product_subgraph)
+        .propagate_headers()
         .finish()
         .await
         .expect("to create router");

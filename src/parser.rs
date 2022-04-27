@@ -34,6 +34,12 @@ impl fmt::Display for ParseHttpError {
     }
 }
 
+#[inline(always)]
+pub fn from_request_parts(parts: http::request::Parts, body: crate::GraphqlRequest) -> RouterRequest {
+    let graphql = apollo_router_core::http_compat::Request::from_parts(parts, body);
+    graphql.into()
+}
+
 ///Parses raw HTTP Request into GraphqlRouter's request.
 pub async fn parse_http_request(req: HttpRequest) -> Result<RouterRequest, ParseHttpError> {
     let (http, body) = req.into_parts();

@@ -10,17 +10,17 @@ use core::{mem, task};
 
 ///Builder to create local graphql service
 pub struct LocalGraphBuilder<Q, M, S> {
-    builder: fn() -> Schema<Q, M, S>,
-    name: String,
+    schema: Schema<Q, M, S>,
+    name: &'static str,
     data: async_graphql::context::Data,
 }
 
 impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'static> LocalGraphBuilder<Q, M, S> {
     #[inline]
     ///Starts building subgraph
-    pub fn new(name: String, builder: fn() -> Schema<Q, M, S>) -> Self {
+    pub fn new(name: &'static str, schema: Schema<Q, M, S>) -> Self {
         Self {
-            builder,
+            schema,
             name,
             data: Default::default(),
         }
@@ -38,7 +38,7 @@ impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'st
     pub fn build(self) -> LocalGraphService<Q, M, S> {
         LocalGraphService {
             name: self.name,
-            inner: (self.builder)(),
+            inner: self.schema,
             data: self.data,
         }
     }
@@ -51,7 +51,7 @@ impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'st
 
     #[inline(always)]
     fn name(&self) -> &str {
-        self.name.as_str()
+        self.name
     }
 
     #[inline(always)]
@@ -62,7 +62,7 @@ impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'st
 
 /// Local graphql service.
 pub struct LocalGraphService<Q, M, S> {
-    name: String,
+    name: &'static str,
     inner: Schema<Q, M, S>,
     data: async_graphql::context::Data,
 }
@@ -82,11 +82,11 @@ impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'st
 
     #[inline]
     fn call(&mut self, request: SubgraphRequest) -> Self::Future {
-        tracing::debug!("{}: Local subgraph request", self.name);
+        tracing::info!("{}: Local subgraph request", self.name);
 
         let (_http, graphql) = request.subgraph_request.into_parts();
         let context = request.context;
-        let service_name = self.name.clone();
+        let service_name = self.name;
         let mut variables = async_graphql::Variables::default();
 
         for (key, val) in graphql.variables.iter() {
@@ -104,13 +104,15 @@ impl<Q: ObjectType + 'static, M: ObjectType + 'static, S: SubscriptionType + 'st
             let val = serde_json_bytes::from_value(val.clone()).unwrap_or_default();
             transformed_req.extensions.insert(key, val);
         }
+        //TODO: This subgraph is valid once if we insert data.
+        //      Consider if we need it to be re-used
         mem::swap(&mut self.data, &mut transformed_req.data);
 
         let schema = self.inner.clone();
         let res = async move {
             let res = schema.execute(transformed_req).await;
             let bytes = serde_json::to_vec(&res)?;
-            let res = apollo_router_core::Response::from_bytes(service_name.as_str(), bytes.into())?;
+            let res = apollo_router_core::Response::from_bytes(service_name, bytes.into())?;
             let res = apollo_router_core::SubgraphResponse {
                 //It shouldn't fail here actually but just in case propagate error
                 response: http::Response::builder().body(res)?.into(),

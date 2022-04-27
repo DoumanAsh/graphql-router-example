@@ -45,7 +45,7 @@ default-features = false
 
 [dependencies.apollo-router-core]
 git = "https://github.com/apollographql/router"
-rev = "a4b78d3774926a28c02ca4c0ba66780de13c9ca5"
+rev = "86e77965b536bfded97f6ef9687096eb2c520026"
 default-features = false
 
 [dev-dependencies.async-graphql-axum]
