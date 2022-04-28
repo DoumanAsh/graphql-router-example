@@ -28,13 +28,22 @@ type Product
 
 type Query {
   me: User! @join__field(graph: USER)
+  meType: UserType! @join__field(graph: USER)
   topProducts: [Product!]! @join__field(graph: PRODUCT)
+}
+
+type RegularUser implements UserType {
+  description: String!
 }
 
 type Review {
   author: User!
   body: String!
   product: Product!
+}
+
+type SuperUser implements UserType {
+  description: String!
 }
 
 type User
@@ -45,6 +54,10 @@ type User
   id: ID! @join__field(graph: USER)
   reviews: [Review!]! @join__field(graph: REVIEW)
   username: String! @join__field(graph: USER)
+}
+
+interface UserType {
+  description: String!
 }
 
 enum core__Purpose {

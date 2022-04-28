@@ -2,7 +2,7 @@ use graphql_router::{GraphqlRequest, GraphqlResponse, GraphqlRouter, LocalGraphB
 
 use std::sync::Arc;
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, SimpleObject, ID};
+use async_graphql::{Interface, Context, EmptyMutation, EmptySubscription, Object, SimpleObject, ID};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::Extension;
 use hyper::Uri;
@@ -13,6 +13,23 @@ mod user {
     use super::*;
 
     pub type Schema = async_graphql::Schema<Query, EmptyMutation, EmptySubscription>;
+
+    #[derive(SimpleObject)]
+    pub struct SuperUser {
+        pub description: String,
+    }
+
+    #[derive(SimpleObject)]
+    pub struct RegularUser {
+        pub description: String,
+    }
+
+    #[derive(Interface)]
+    #[graphql(field(name = "description", type = "&String"))]
+    pub enum UserType {
+        Super(SuperUser),
+        Regular(RegularUser),
+    }
 
     #[derive(SimpleObject)]
     pub struct User {
@@ -29,6 +46,12 @@ mod user {
                 id: "1234".into(),
                 username: "Me".to_string(),
             }
+        }
+
+        async fn me_type(&self) -> UserType {
+            UserType::Regular(RegularUser {
+                description: "regular".to_owned()
+            })
         }
 
         #[graphql(entity)]
@@ -264,21 +287,21 @@ async fn should_handle_local_and_remote_graphql() {
     });
 
     let server_task = tokio::spawn(graceful);
+    let http = hyper::Client::new();
+    let supergraph_uri = Uri::from_static("http://127.0.0.1:9000/super");
 
     //START
 
     //query me
     let expected_body = r#"{"data":{"me":{"username":"Me"}}}"#;
 
-    let http = hyper::Client::new();
-    let supergraph_uri = Uri::from_static("http://127.0.0.1:9000/super");
     let req = apollo_router_core::Request::builder()
         .query(r#"query Query { me { username } }"#.to_owned())
         .build();
     let req = serde_json::to_vec(&req).expect("Serialize request");
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)
-        .uri(supergraph_uri)
+        .uri(supergraph_uri.clone())
         .header("Content-Type", "application/json")
         .body(req.into())
         .expect("build request");
@@ -295,10 +318,43 @@ async fn should_handle_local_and_remote_graphql() {
     //query topProducts
     let expected_body = r#"{"data":{"topProducts":[{"name":"Trilby","price":11,"upc":"top-1","reviews":[{"body":"A highly effective form of birth control.","author":{"username":"Me"}},{"body":"Fedoras are one of the most fashionable hats around and can look great with a variety of outfits.","author":{"username":"Me"}},{"body":"This is the last straw. Hat you will wear. 11/10","author":{"username":"User ID(\"7777\")"}}]},{"name":"Fedora","price":22,"upc":"top-2","reviews":[]},{"name":"Boater","price":33,"upc":"top-3","reviews":[]}]}}"#;
 
-    let http = hyper::Client::new();
-    let supergraph_uri = Uri::from_static("http://127.0.0.1:9000/super");
     let req = apollo_router_core::Request::builder()
         .query(r#"query Query { topProducts { name, price, upc, reviews { body, author { username } } } }"#.to_owned())
+        .build();
+    let req = serde_json::to_vec(&req).expect("Serialize request");
+    let req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .uri(supergraph_uri.clone())
+        .header("Content-Type", "application/json")
+        .body(req.into())
+        .expect("build request");
+
+    println!("Supergraph request\n=====");
+    let response = http.request(req).await.expect("Successfully send supergraph request");
+    let (headers, body) = response.into_parts();
+    let body = hyper::body::to_bytes(body).await.expect("To read body");
+    let body = core::str::from_utf8(&body).expect("To return string back");
+    println!("Supergraph response\n=====\n{:?}", headers);
+    println!("=====\n{}", body);
+    assert_eq!(body, expected_body);
+
+    //query meType
+    let expected_body = r#"{"data":{"meType":{"__typename":"RegularUser","description":"regular"}}}"#;
+    let query = r#"
+    fragment TypeBase on UserType {
+      __typename
+      description
+    }
+
+    query Query {
+      meType {
+        ...TypeBase
+      }
+    }
+    "#;
+
+    let req = apollo_router_core::Request::builder()
+        .query(query.to_owned())
         .build();
     let req = serde_json::to_vec(&req).expect("Serialize request");
     let req = hyper::Request::builder()

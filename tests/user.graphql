@@ -1,7 +1,17 @@
 extend type Query {
 	me: User!
+	meType: UserType!
+}
+type RegularUser implements UserType {
+	description: String!
+}
+type SuperUser implements UserType {
+	description: String!
 }
 type User @key(fields: "id") {
 	id: ID!
 	username: String!
+}
+interface UserType {
+	description: String!
 }
