@@ -10,7 +10,7 @@ default-features = false
 features = ["attributes"]
 
 [dependencies.http]
-version = "0.2"
+version = "0.2.7"
 default-features = false
 
 [dependencies.serde_json]
@@ -45,7 +45,7 @@ default-features = false
 
 [dependencies.apollo-router-core]
 git = "https://github.com/apollographql/router"
-rev = "86e77965b536bfded97f6ef9687096eb2c520026"
+rev = "d13998f35315675a4ed00d118adc283d50345d3d"
 default-features = false
 
 [dev-dependencies.async-graphql-axum]
