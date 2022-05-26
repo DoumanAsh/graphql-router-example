@@ -339,7 +339,7 @@ async fn should_handle_local_and_remote_graphql() {
     assert_eq!(body, expected_body);
 
     //query meType
-    let expected_body = r#"{"data":{"meType":{"__typename":"RegularUser","description":"regular"}}}"#;
+    let expected_body = r#"{"data":{"__typename":"Query","meType":{"__typename":"RegularUser","description":"regular"}}}"#;
     let query = r#"
     fragment TypeBase on UserType {
       __typename
@@ -347,6 +347,7 @@ async fn should_handle_local_and_remote_graphql() {
     }
 
     query Query {
+      __typename
       meType {
         ...TypeBase
       }
@@ -359,7 +360,7 @@ async fn should_handle_local_and_remote_graphql() {
     let req = serde_json::to_vec(&req).expect("Serialize request");
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)
-        .uri(supergraph_uri)
+        .uri(supergraph_uri.clone())
         .header("Content-Type", "application/json")
         .body(req.into())
         .expect("build request");
