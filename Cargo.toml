@@ -31,7 +31,7 @@ version = "0.3.1"
 default-features = false
 
 [dependencies.async-graphql]
-version = "3.0.38"
+version = "4.0.1"
 default-features = false
 
 [dependencies.hyper]
@@ -48,12 +48,12 @@ git = "https://github.com/apollographql/router"
 rev = "05b4f90333b9f39e024c8904ab867a7d0827c311"
 default-features = false
 
-[dev-dependencies.async-graphql-axum]
-version = "3.0.38"
-default-features = false
-
 [dev-dependencies.axum]
 version = "0.5.3"
+
+[dev-dependencies.async-graphql-axum]
+version = "4.0.1"
+default-features = false
 
 [dev-dependencies.tokio]
 version = "1"
